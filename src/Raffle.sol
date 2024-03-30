@@ -18,6 +18,7 @@ error Raffle__NotRightETHAmount();
 error Raffle__NotOpen();
 error Raffle__TransferETHToWinnerFailed();
 error Raffle__HasNoPlayers();
+error Raffle__IsNotIntervalFinished();
 
 contract Raffle is VRFConsumerBaseV2 {
     // Type declarations
@@ -78,11 +79,11 @@ contract Raffle is VRFConsumerBaseV2 {
         emit Participated(msg.sender);
     }
 
-    function requestRandomWords() external {
+    function requestPickWinner() external {
         if (block.timestamp - s_startingTime < i_duration)
-            revert Raffle__NotOpen();
-        if (s_players.length == 0) revert Raffle__NotOpen();
-        if (s_state != RaffleState.Open) revert Raffle__HasNoPlayers();
+            revert Raffle__IsNotIntervalFinished();
+        if (s_players.length == 0) revert Raffle__HasNoPlayers();
+        if (s_state != RaffleState.Open) revert Raffle__NotOpen();
         s_state = RaffleState.Closed;
         // Will revert if subscription is not set and funded.
         VRFCoordinatorV2Interface(i_coordinator).requestRandomWords(
@@ -118,5 +119,17 @@ contract Raffle is VRFConsumerBaseV2 {
 
     function getSubscriptionId() public view returns (uint64) {
         return i_subscriptionId;
+    }
+
+    function getStartingTime() public view returns (uint256) {
+        return s_startingTime;
+    }
+
+    function getInterval() public view returns (uint256) {
+        return i_duration;
+    }
+
+    function getPlayerFromIndex(uint256 index) public view returns (address) {
+        return s_players[index];
     }
 }
