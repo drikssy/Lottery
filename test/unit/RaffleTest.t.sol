@@ -26,7 +26,7 @@ contract RaffleTest is Test {
         vm.prank(PLAYER);
         raffle.participate{value: PARTICIPATION_AMOUNT}();
         vm.warp(raffle.getStartingTime() + raffle.getInterval());
-        raffle.requestPickWinner();
+        raffle.pickWinner();
 
         vm.prank(PLAYER);
         vm.expectRevert(Raffle__NotOpen.selector);
