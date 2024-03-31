@@ -19,6 +19,11 @@ error Raffle__NotOpen();
 error Raffle__TransferETHToWinnerFailed();
 error Raffle__HasNoPlayers();
 error Raffle__IsNotIntervalFinished();
+error Raffle__NotReadyToPickWinner(
+    uint256 endingTime,
+    uint256 playersCount,
+    Raffle.RaffleState state
+);
 
 contract Raffle is VRFConsumerBaseV2 {
     // Type declarations
@@ -42,6 +47,7 @@ contract Raffle is VRFConsumerBaseV2 {
     uint32 private immutable i_callbackGasLimit;
     uint32 private constant NUMBER_OF_WORDS = 1;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    uint16 private constant MINIMUM_PLAYERS = 1;
 
     uint256 private s_startingTime;
     RaffleState private s_state;
@@ -79,11 +85,21 @@ contract Raffle is VRFConsumerBaseV2 {
         emit Participated(msg.sender);
     }
 
-    function requestPickWinner() external {
-        if (block.timestamp - s_startingTime < i_duration)
-            revert Raffle__IsNotIntervalFinished();
-        if (s_players.length == 0) revert Raffle__HasNoPlayers();
-        if (s_state != RaffleState.Open) revert Raffle__NotOpen();
+    function winnerPickable() public view returns (bool) {
+        bool timeElapsed = block.timestamp - s_startingTime >= i_duration;
+        bool enoughPlayers = s_players.length >= MINIMUM_PLAYERS;
+        bool stateIsOpen = s_state == RaffleState.Open;
+
+        return (timeElapsed && enoughPlayers && stateIsOpen);
+    }
+
+    function pickWinner() public {
+        if (!winnerPickable())
+            revert Raffle__NotReadyToPickWinner(
+                s_startingTime + i_duration,
+                s_players.length,
+                s_state
+            );
         s_state = RaffleState.Closed;
         // Will revert if subscription is not set and funded.
         VRFCoordinatorV2Interface(i_coordinator).requestRandomWords(
